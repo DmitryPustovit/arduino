@@ -16,10 +16,9 @@ public:
   bool begin(TwoWire &wire);
 #if defined(ESP8266)
   bool begin(TwoWire &wire, Stream &stream);
-  void handle(void);
 #else
-  void _handle(void);
 #endif
+  void handle(void);
   void end(void);
   int getTvocIndex(void);
   int getNoxIndex(void);
@@ -52,13 +51,13 @@ private:
   int tvocLearnOffset;
 
 #if defined(ESP8266)
-  uint32_t conditioningPeriod;
-  uint8_t conditioningCount;
   Stream *_debugStream = nullptr;
   const char *TAG = "SGP4x";
 #else
-  TaskHandle_t pollTask;
 #endif
+  uint32_t conditioningPeriod;
+  uint8_t conditioningCount;
+
   bool isBegin(void);
   bool boardSupported(void);
   bool getRawSignal(uint16_t &raw_voc, uint16_t &raw_nox,

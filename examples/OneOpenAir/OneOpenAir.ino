@@ -281,6 +281,7 @@ void loop() {
     }
   }
   if (configuration.hasSensorSGP) {
+    ag->sgp41.handle();
     tvocSchedule.run();
   }
   if (ag->isOne()) {

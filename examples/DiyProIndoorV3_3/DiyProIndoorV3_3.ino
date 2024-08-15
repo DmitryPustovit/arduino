@@ -199,6 +199,7 @@ void loop() {
     tempHumSchedule.run();
   }
   if (configuration.hasSensorSGP) {
+    ag.sgp41.handle();
     tvocSchedule.run();
   }
 
@@ -218,10 +219,6 @@ void loop() {
   configUpdateHandle();
 
   localServer._handle();
-
-  if (configuration.hasSensorSGP) {
-    ag.sgp41.handle();
-  }
 
   MDNS.update();
 

@@ -68,18 +68,11 @@ bool Sgp41::begin(TwoWire &wire) {
 
   onConditioning = true;
   _handleFailCount = 0;
-#ifdef ESP32
-  /** Create task */
-  xTaskCreate(
-      [](void *param) {
-        Sgp41 *sgp = static_cast<Sgp41 *>(param);
-        sgp->_handle();
-      },
-      "sgp_poll", 2048, this, 5, &pollTask);
-#else
   conditioningPeriod = millis();
   conditioningCount = 0;
-#endif
+
+  tvoc = utils::getInvalidVOC();
+  nox = utils::getInvalidNOx();
 
   this->_isBegin = true;
   AgLog("Initialize");
@@ -91,6 +84,8 @@ bool Sgp41::begin(TwoWire &wire, Stream &stream) {
   this->_debugStream = &stream;
   return this->begin(wire);
 }
+#else 
+#endif
 void Sgp41::handle(void) {
   uint32_t ms = (uint32_t)(millis() - conditioningPeriod);
   if (ms >= 1000) {
@@ -130,53 +125,6 @@ void Sgp41::handle(void) {
   }
 }
 
-#else
-/**
- * @brief Handle the sensor conditioning and run time udpate value, This method
- * must not call, it's called on private task
- */
-void Sgp41::_handle(void) {
-  /** NOx conditionning */
-  uint16_t err;
-  for (int i = 0; i < 10; i++) {
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    if (_noxConditioning() == false) {
-      AgLog("SGP on conditioning failed");
-      vTaskDelete(NULL);
-    }
-  }
-
-  onConditioning = false;
-  AgLog("Conditioning finish");
-
-  uint16_t srawVoc, srawNox;
-  for (;;) {
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    if (getRawSignal(srawVoc, srawNox)) {
-      tvocRaw = srawVoc;
-      noxRaw = srawNox;
-      nox = noxAlgorithm()->process(srawNox);
-      tvoc = vocAlgorithm()->process(srawVoc);
-
-      _handleFailCount = 0;
-      // AgLog("Polling SGP41 success: tvoc: %d, nox: %d", tvoc, nox);
-    } else {
-      if(_handleFailCount < 5) {
-        _handleFailCount++;
-        AgLog("Polling SGP41 failed: %d", _handleFailCount);
-      }
-
-      if (_handleFailCount >= 5) {
-        tvocRaw = utils::getInvalidVOC();
-        tvoc = utils::getInvalidVOC();
-        noxRaw = utils::getInvalidNOx();
-        nox = utils::getInvalidNOx();
-      }
-    }
-  }
-}
-#endif
-
 /**
  * @brief De-Initialize sensor
  */
@@ -186,7 +134,6 @@ void Sgp41::end(void) {
   }
 
 #ifdef ESP32
-  vTaskDelete(pollTask);
 #else
   _debugStream = nullptr;
 #endif
